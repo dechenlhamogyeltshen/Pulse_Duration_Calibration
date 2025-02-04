@@ -4,3 +4,5 @@ HUXt_data,data/HUXt
 HUXt_figures,figures
 test_data,data/test_data
 example_inputs,data/example_inputs
+output,data/output
+input,data/input
