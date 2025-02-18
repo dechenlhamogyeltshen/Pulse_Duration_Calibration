@@ -8,11 +8,11 @@ from astropy.time import Time, TimeDelta
 import huxt as H
 import huxt_analysis as HA
 
-# --- Load data ---
+# --- Load data ---------------------------------------------------------------
 
 # Read in Blair's pairing on DONKI and CR2003
 project_dirs = H._setup_dirs_()
-crpath = os.path.join(project_dirs['input'],'RicCan_Dtags_blair_2.csv')
+crpath = os.path.join(project_dirs['input'],'(I)CMEs_SingleEvents.csv')
 
 # Load the CSV file into a DataFrame
 crlist = pd.read_csv(crpath)
@@ -51,13 +51,13 @@ def convert_to_timedelta(time_str):
         return None
 
 # Convert Time_Error column from string to timedelta
-crlist['Time_Error'] = crlist['Time_Error'].apply(lambda x: convert_to_timedelta(x) if isinstance(x, str) else None)
+# crlist['Time_Error'] = crlist['Time_Error'].apply(lambda x: convert_to_timedelta(x) if isinstance(x, str) else None)
 
 # Convert Time_Error column from timedelta to days
-def convert_timedelta_to_days(td):
-    return td.days + td.seconds / 86400 if isinstance(td, timedelta) else None
+# def convert_timedelta_to_days(td):
+    # return td.days + td.seconds / 86400 if isinstance(td, timedelta) else None
 
-crlist['Time_Error_Days'] = crlist['Time_Error'].apply(convert_timedelta_to_days)
+# crlist['Time_Error_Days'] = crlist['Time_Error'].apply(convert_timedelta_to_days)
 
 # compute 21.5-215 transit time
 crlist['tt_21'] = np.nan 
@@ -73,10 +73,10 @@ for irow in range(0, len(crlist)):
 crlist['duration_1au'] = crlist['duration_1au'].apply(lambda x: x.days + x.seconds / 86400 if isinstance(x, timedelta) else None)
 
 # Drop rows where the absolute value of Time_Error_Days is greater than 2 hours
-crlist = crlist[abs(crlist['Time_Error_Days']) <= 0.08]
-crlist = crlist.reset_index()
+# crlist = crlist[abs(crlist['Time_Error_Days']) <= 0.08]
+# crlist = crlist.reset_index()
 
-print('N = ' + str(len(crlist)))
+# print('N = ' + str(len(crlist)))
 
 # Drop rows where angular radius is shorter than angular distance
 crlist['angdist'] = np.sqrt(crlist['lat']*crlist['lat'] + crlist['lon']*crlist['lon'])
@@ -87,7 +87,7 @@ print('N = ' + str(len(crlist)))
 
 #===============================================================================
 
-# --- Initialize Model ---
+# --- Initialize Model --------------------------------------------------------
 
 r_in = 21.5 * u.solRad
 vsw = 350
@@ -107,12 +107,50 @@ model = H.HUXt(
 )
 
 # Initialize Data Storage
-transit_time_results = []
-arrival_speed_results = []
+ang_width = []
+transit_time = []
+arrival_speed = []
 
 # First row: Observed values
-transit_time_results.append(['Observed'] + list(crlist['tt_21']))
-arrival_speed_results.append(['Observed'] + list(crlist['V_ICME']))
+ang_width.append(['Angular Width'] + list(crlist['Ang_rad']))
+transit_time.append(['Observed'] + list(crlist['tt_21']))
+arrival_speed.append(['Observed'] + list(crlist['V_ICME']))
+
+# Spheroidal
+spheroidal_tt = []
+spheroidal_as = []
+
+# Iterate over all CMEs in crlist
+for _, onecme in crlist.iterrows():
+    spheroidal_cme = H.ConeCME(
+        t_launch=0 * u.day,
+        longitude=0.0 * u.deg,
+        latitude=0.0 * u.deg,
+        initial_height=r_in,
+        width=onecme['Ang_rad'] * u.deg,
+        v=onecme['V'] * (u.km / u.s),
+        thickness=0 * u.solRad,
+        cme_fixed_duration=False
+    )
+
+    model.solve([spheroidal_cme])
+
+    # Compute the transit time
+    stats = model.cmes[0].compute_arrival_at_body('EARTH')
+    s_tt = stats['t_transit'].value
+    arrival_time = stats['t_arrive']
+
+    # Find the arrival speed within 1 day of arrival
+    earth_series = HA.get_observer_timeseries(model, observer='Earth')
+    mask = (Time(earth_series['time']) >= arrival_time) & (
+            Time(earth_series['time']) <= arrival_time + 3 * u.day)
+    s_v_1au = earth_series.loc[mask, 'vsw'].max()
+
+    spheroidal_tt.append(s_tt)
+    spheroidal_as.append(s_v_1au)
+
+transit_time.append(['Spheroidal'] + list(spheroidal_tt))
+arrival_speed.append(['Spheroidal'] + list(spheroidal_as))
 
 for duration in durations:
     tt_row = [f"tt_{duration}h"]
@@ -148,12 +186,13 @@ for duration in durations:
         tt_row.append(tt_val)
         v_row.append(v_1au)
 
-    transit_time_results.append(tt_row)
-    arrival_speed_results.append(v_row)
+    transit_time.append(tt_row)
+    arrival_speed.append(v_row)
 
 # Save results
 data_dir = project_dirs['output']
 out_path = os.path.join(data_dir)
 
-pd.DataFrame(transit_time_results).to_csv(os.path.join(out_path,"cme_transit_time.csv"), index=False, header=False)
-pd.DataFrame(arrival_speed_results).to_csv(os.path.join(out_path,"cme_arrival_speed.csv"), index=False, header=False)
+pd.DataFrame(ang_width).to_csv(os.path.join(out_path,"angular_width.csv"), index=False, header=False)
+pd.DataFrame(transit_time).to_csv(os.path.join(out_path,"cme_transit_time.csv"), index=False, header=False)
+pd.DataFrame(arrival_speed).to_csv(os.path.join(out_path,"cme_arrival_speed.csv"), index=False, header=False)
