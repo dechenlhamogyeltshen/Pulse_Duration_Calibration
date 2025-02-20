@@ -91,7 +91,7 @@ print('N = ' + str(len(crlist)))
 
 r_in = 21.5 * u.solRad
 vsw = 350
-durations = np.arange(5, 23, 0.1)  # CME durations in hours
+durations = np.arange(1, 17.5, 0.1)  # CME durations in hours
 
 # Background wind configuration
 v_boundary = np.ones(128) * vsw * (u.km / u.s)
