@@ -91,7 +91,7 @@ print('N = ' + str(len(crlist)))
 
 r_in = 21.5 * u.solRad
 vsw = 350
-durations = np.arange(1, 17.5, 0.1)  # CME durations in hours
+durations = np.arange(0.1, 20.0, 0.1)  # CME durations in hours
 
 # Background wind configuration
 v_boundary = np.ones(128) * vsw * (u.km / u.s)
@@ -127,7 +127,7 @@ for _, onecme in crlist.iterrows():
         longitude=0.0 * u.deg,
         latitude=0.0 * u.deg,
         initial_height=r_in,
-        width=onecme['Ang_rad'] * u.deg,
+        width=2.0 * onecme['Ang_rad'] * u.deg,
         v=onecme['V'] * (u.km / u.s),
         thickness=0 * u.solRad,
         cme_fixed_duration=False
@@ -163,7 +163,7 @@ for duration in durations:
             longitude=0.0 * u.deg,
             latitude=0.0 * u.deg,
             initial_height=r_in,
-            width=onecme['Ang_rad'] * u.deg,
+            width=2.0 * onecme['Ang_rad'] * u.deg,
             v=onecme['V'] * (u.km / u.s),
             thickness=0 * u.solRad,
             cme_fixed_duration=True,
