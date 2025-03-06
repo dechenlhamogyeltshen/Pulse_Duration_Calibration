@@ -1,11 +1,11 @@
 import numpy as np
 import os
 import astropy.units as u
-import matplotlib.pyplot as plt
 import pandas as pd
 from datetime import datetime, timedelta
 from astropy.time import Time, TimeDelta
 import huxt as H
+import huxt_inputs as Hin
 import huxt_analysis as HA
 
 # --- Load data ---------------------------------------------------------------
@@ -50,6 +50,31 @@ def convert_to_timedelta(time_str):
     except ValueError:
         return None
 
+def get_earth_lat(dt):
+    """
+    A function to return Earth latitude for a given date, in radians
+ 
+    Parameters
+    ----------
+    dt : datetime
+ 
+    Returns
+    -------
+    E_lat: Earth latitude, with astropy units of radians
+ 
+    """
+    cr, cr_lon_init = Hin.datetime2huxtinputs(dt)
+    # Use the HUXt ephemeris data to get Earth lat over the CR
+    # ========================================================
+    dummymodel = H.HUXt(v_boundary=np.ones(128)*400*(u.km/u.s), simtime=0.1*u.day, 
+                         cr_num=cr,cr_lon_init=cr_lon_init, lon_out=0.0*u.deg)
+    # retrieve a bodies position at each model timestep:
+    earth = dummymodel.get_observer('earth')
+    # get average Earth lat
+    E_lat = np.nanmean(earth.lat_c)
+    E_lat = E_lat.to(u.deg)  # Convert to degrees
+    return E_lat
+
 # Convert Time_Error column from string to timedelta
 # crlist['Time_Error'] = crlist['Time_Error'].apply(lambda x: convert_to_timedelta(x) if isinstance(x, str) else None)
 
@@ -72,6 +97,11 @@ for irow in range(0, len(crlist)):
 # Convert  from timedelta to days
 crlist['duration_1au'] = crlist['duration_1au'].apply(lambda x: x.days + x.seconds / 86400 if isinstance(x, timedelta) else None)
 
+# Add a new column with carrington rotation number of CME time
+crlist['cr_num'] = crlist['CME_Time'].apply(lambda dt: Hin.datetime2huxtinputs(dt)[0])
+crlist['cr_lon_init'] = crlist['CME_Time'].apply(lambda dt: Hin.datetime2huxtinputs(dt)[1])
+crlist['earth_lat'] = crlist['CME_Time'].apply(lambda dt: get_earth_lat(dt))
+
 # Drop rows where the absolute value of Time_Error_Days is greater than 2 hours
 # crlist = crlist[abs(crlist['Time_Error_Days']) <= 0.08]
 # crlist = crlist.reset_index()
@@ -87,70 +117,83 @@ print('N = ' + str(len(crlist)))
 
 #===============================================================================
 
-# --- Initialize Model --------------------------------------------------------
-
-r_in = 21.5 * u.solRad
-vsw = 350
-durations = np.arange(0.1, 20.0, 0.1)  # CME durations in hours
-
-# Background wind configuration
-v_boundary = np.ones(128) * vsw * (u.km / u.s)
-
-# Initialize the model
-model = H.HUXt(
-    v_boundary=v_boundary,
-    latitude=0 * u.deg,
-    r_min=r_in,
-    simtime=10 * u.day,
-    dt_scale=4,
-    lon_out=0 * u.deg
-)
+# --- Spheroidal --------------------------------------------------------
 
 # Initialize Data Storage
-ang_width = []
 transit_time = []
 arrival_speed = []
 
-# First row: Observed values
-ang_width.append(['Angular Width'] + list(crlist['Ang_rad']))
+# First three rows
+transit_time.append(['Angular_Width'] + list(crlist['Ang_rad']))
+arrival_speed.append(['Angular_Width'] + list(crlist['Ang_rad']))
+
+transit_time.append(['Velocity'] + list(crlist['V']))
+arrival_speed.append(['Velocity'] + list(crlist['V']))
+
 transit_time.append(['Observed'] + list(crlist['tt_21']))
 arrival_speed.append(['Observed'] + list(crlist['V_ICME']))
 
-# Spheroidal
-spheroidal_tt = []
-spheroidal_as = []
+r_in = 21.5 * u.solRad # initial height
+durations = np.arange(0.1, 20.0, 0.1)  # CME durations in hours
 
-# Iterate over all CMEs in crlist
-for _, onecme in crlist.iterrows():
-    spheroidal_cme = H.ConeCME(
-        t_launch=0 * u.day,
-        longitude=0.0 * u.deg,
-        latitude=0.0 * u.deg,
-        initial_height=r_in,
-        width=2.0 * onecme['Ang_rad'] * u.deg,
-        v=onecme['V'] * (u.km / u.s),
-        thickness=0 * u.solRad,
-        cme_fixed_duration=False
-    )
+def spheroidal():
+    ''' Solve for spheroidal CME transit times'''
+    
+    spheroidal_tt = []
+    spheroidal_as = []
+    
+    # Iterate over all CMEs in crlist
+    for _, onecme in crlist.iterrows():
+        
+        # Setup HUXt for a standard 30Rs run
+        vr_in = Hin.get_MAS_long_profile(onecme['cr_num'], onecme['earth_lat'])
 
-    model.solve([spheroidal_cme])
+        #  Map the inner boundary MAS values inwards from 30 rS to 21.5 rS
+        vr_21 = Hin.map_v_boundary_inwards(vr_in, 30*u.solRad, r_in)
 
-    # Compute the transit time
-    stats = model.cmes[0].compute_arrival_at_body('EARTH')
-    s_tt = stats['t_transit'].value
-    arrival_time = stats['t_arrive']
+        #  Now setup HUXt to run from 10Rs
+        model21 = H.HUXt(v_boundary = vr_21, 
+                         cr_num=onecme['cr_num'],
+                         cr_lon_init=onecme['cr_lon_init'],
+                         simtime=10*u.day, 
+                         latitude=0*u.deg,
+                         lon_out=0*u.deg,
+                         dt_scale=4,
+                         r_min=r_in)
 
-    # Find the arrival speed within 1 day of arrival
-    earth_series = HA.get_observer_timeseries(model, observer='Earth')
-    mask = (Time(earth_series['time']) >= arrival_time) & (
-            Time(earth_series['time']) <= arrival_time + 3 * u.day)
-    s_v_1au = earth_series.loc[mask, 'vsw'].max()
+        cme = H.ConeCME(t_launch=0 * u.day, 
+                        longitude=onecme['lon'] * u.deg, 
+                        latitude=onecme['lat'] * u.deg, 
+                        initial_height=r_in, 
+                        width=2.0 * onecme['Ang_rad'] * u.deg, 
+                        v=onecme['V'] * (u.km / u.s), 
+                        thickness=0 * u.solRad, 
+                        cme_fixed_duration=False)
 
-    spheroidal_tt.append(s_tt)
-    spheroidal_as.append(s_v_1au)
+        model21.solve([cme])
+
+        # Compute the transit time
+        stats = model21.cmes[0].compute_arrival_at_body('EARTH')
+        tt = stats['t_transit'].value
+        arrival_time = stats['t_arrive']
+
+        # Find the arrival speed within 1 day of arrival
+        earth_series = HA.get_observer_timeseries(model21, observer='Earth')
+        mask = (Time(earth_series['time']) >= arrival_time) & (
+                Time(earth_series['time']) <= arrival_time + 3 * u.day)
+        v_1au = earth_series.loc[mask, 'vsw'].max()
+
+        spheroidal_tt.append(tt)
+        spheroidal_as.append(v_1au)
+    
+    return spheroidal_tt,spheroidal_as
+
+spheroidal_tt, spheroidal_as = spheroidal()
 
 transit_time.append(['Spheroidal'] + list(spheroidal_tt))
 arrival_speed.append(['Spheroidal'] + list(spheroidal_as))
+
+# --- Fixed pulse duration --------------------------------------------------------
 
 for duration in durations:
     tt_row = [f"tt_{duration}h"]
@@ -158,10 +201,27 @@ for duration in durations:
     
     # Iterate over all CMEs in crlist
     for _, onecme in crlist.iterrows():
+        
+        # Setup HUXt for a standard 30Rs run
+        vr_in = Hin.get_MAS_long_profile(onecme['cr_num'], onecme['earth_lat'])
+
+        #  Map the inner boundary MAS values inwards from 30 rS to 21.5 rS
+        vr_21 = Hin.map_v_boundary_inwards(vr_in, 30*u.solRad, r_in)
+
+        #  Now setup HUXt to run from 10Rs
+        model21 = H.HUXt(v_boundary = vr_21, 
+                         cr_num=onecme['cr_num'],
+                         cr_lon_init=onecme['cr_lon_init'],
+                         simtime=10*u.day, 
+                         latitude=0*u.deg, 
+                         lon_out=0*u.deg,
+                         dt_scale=4, 
+                         r_min=r_in)
+        
         cme = H.ConeCME(
             t_launch=0 * u.day,
-            longitude=0.0 * u.deg,
-            latitude=0.0 * u.deg,
+            longitude=onecme['lon'] * u.deg,
+            latitude=onecme['lat'] * u.deg,
             initial_height=r_in,
             width=2.0 * onecme['Ang_rad'] * u.deg,
             v=onecme['V'] * (u.km / u.s),
@@ -170,15 +230,15 @@ for duration in durations:
             fixed_duration=duration * 60 * 60 * u.s
         )
 
-        model.solve([cme])
+        model21.solve([cme])
 
         # Compute the transit time
-        stats = model.cmes[0].compute_arrival_at_body('EARTH')
+        stats = model21.cmes[0].compute_arrival_at_body('EARTH')
         tt_val = stats['t_transit'].value
         arrival_time = stats['t_arrive']
 
         # Find the arrival speed within 1 day of arrival
-        earth_series = HA.get_observer_timeseries(model, observer='Earth')
+        earth_series = HA.get_observer_timeseries(model21, observer='Earth')
         mask = (Time(earth_series['time']) >= arrival_time) & (
                 Time(earth_series['time']) <= arrival_time + 3 * u.day)
         v_1au = earth_series.loc[mask, 'vsw'].max()
@@ -193,6 +253,5 @@ for duration in durations:
 data_dir = project_dirs['output']
 out_path = os.path.join(data_dir)
 
-pd.DataFrame(ang_width).to_csv(os.path.join(out_path,"angular_width.csv"), index=False, header=False)
 pd.DataFrame(transit_time).to_csv(os.path.join(out_path,"cme_transit_time.csv"), index=False, header=False)
 pd.DataFrame(arrival_speed).to_csv(os.path.join(out_path,"cme_arrival_speed.csv"), index=False, header=False)
