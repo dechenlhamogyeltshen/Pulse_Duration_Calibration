@@ -167,7 +167,7 @@ def spheroidal():
                         initial_height=r_in, 
                         width=2.0 * onecme['Ang_rad'] * u.deg, 
                         v=onecme['V'] * (u.km / u.s), 
-                        thickness=0 * u.solRad, 
+                        thickness=30.0 * u.solRad,
                         cme_fixed_duration=False)
 
         model21.solve([cme])
@@ -225,7 +225,7 @@ for duration in durations:
             initial_height=r_in,
             width=2.0 * onecme['Ang_rad'] * u.deg,
             v=onecme['V'] * (u.km / u.s),
-            thickness=0 * u.solRad,
+            thickness=30.0 * u.solRad,
             cme_fixed_duration=True,
             fixed_duration=duration * 60 * 60 * u.s
         )
