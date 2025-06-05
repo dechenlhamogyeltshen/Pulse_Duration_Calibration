@@ -1816,21 +1816,31 @@ def _upwind_step_(v_up, v_dn, dtdr, alpha, r_accel, rrel):
     Returns:
          v_up_next: The upwind values at the next time step, numpy array with units of km/s.
     """
+    n = len(v_dn)
+    v_up_next = np.empty(n, dtype=np.float64)
 
-    # Arguments for computing the acceleration factor
-    accel_arg = -rrel[:-1] / r_accel
-    accel_arg_p = -rrel[1:] / r_accel
+    for i in range(n):
+        # compute indices for accel arguments safely
+        if i >= len(rrel) - 1:
+            continue  # skip last point to avoid out-of-bounds
 
-    # Get estimate of next time step
-    v_up_next = v_up - dtdr * v_up * (v_up - v_dn)
-    # Compute the probable speed at 30rS from the observed speed at r
-    v_source = v_dn / (1.0 + alpha * (1.0 - np.exp(accel_arg)))
-    # Then compute the speed gain between r and r+dr
-    v_diff = 0.0
-    if v_source < 650.0:
-        v_diff = alpha * v_source * (np.exp(accel_arg) - np.exp(accel_arg_p))
-    # Add the residual acceleration over this grid cell
-    v_up_next = v_up_next + (v_dn * dtdr * v_diff)
+        accel_arg = -rrel[i] / r_accel
+        accel_arg_p = -rrel[i + 1] / r_accel
+        
+        # Upwind scheme
+        v_up_next[i] = v_up[i] - dtdr * v_up[i] * (v_up[i] - v_dn[i])
+
+        # Acceleration factor
+        denom = 1.0 + alpha * (1.0 - np.exp(accel_arg))
+        v_source = v_dn[i] / denom
+
+        # Residual acceleration
+        v_diff = 0.0
+        if v_source < 650.0:
+            v_diff = alpha * v_source * (np.exp(accel_arg) - np.exp(accel_arg_p))
+
+        # Add residual acceleration to upwind step
+        v_up_next[i] += v_dn[i] * dtdr * v_diff
 
     return v_up_next
 
