@@ -1826,7 +1826,9 @@ def _upwind_step_(v_up, v_dn, dtdr, alpha, r_accel, rrel):
     # Compute the probable speed at 30rS from the observed speed at r
     v_source = v_dn / (1.0 + alpha * (1.0 - np.exp(accel_arg)))
     # Then compute the speed gain between r and r+dr
-    v_diff = alpha * v_source * (np.exp(accel_arg) - np.exp(accel_arg_p))
+    v_diff = 0.0
+    if v_source < 650.0:
+        v_diff = alpha * v_source * (np.exp(accel_arg) - np.exp(accel_arg_p))
     # Add the residual acceleration over this grid cell
     v_up_next = v_up_next + (v_dn * dtdr * v_diff)
 
