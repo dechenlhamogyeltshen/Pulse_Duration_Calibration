@@ -319,18 +319,14 @@ def spheroidal():
                                     Earth_R_km.to(u.solRad), rmin)
         
         #========================================================
-        t_ref = Time(onecme['CME_Time']).mjd
-        idx = np.argmin(np.abs(time1au - t_ref))
-        
         # Set up the model at 21.5 rS with backmapped OMNI
-        #model = H.HUXt(v_boundary = vcarr_rmin[idx] * (u.km / u.s), cr_num=onecme['cr_num'], cr_lon_init=onecme['cr_lon_init'], simtime=10*u.day, latitude=0*u.deg, lon_out=0*u.deg, dt_scale=4, r_min=rmin)
         model = Hin.set_time_dependent_boundary(vcarr_rmin, time1au, 
                             run_start, simtime = simtime, r_min=rmin, r_max=rmax, 
                             dt_scale=dt_scale, latitude=0*u.deg, frame = 'sidereal', 
                             track_cmes = True)
 
-        cme = H.ConeCME(t_launch=0.0 * u.day, 
-                        longitude=onecme['lon'] * u.deg, 
+        cme = H.ConeCME(t_launch=13.6 * u.day,
+                        longitude=onecme['lon'] * u.deg,
                         latitude=onecme['lat'] * u.deg, 
                         initial_height=rmin, 
                         width=2.0 * onecme['Ang_rad'] * u.deg, 
@@ -339,15 +335,6 @@ def spheroidal():
                         cme_fixed_duration=False)
 
         model.solve([cme])
-        
-        # The Earth time series can be plotted, along with OMNI data (downloaded on demand),using:
-        fig, axs = HA.plot_earth_timeseries(model, plot_omni = True)
-        data_dir = project_dirs['HUXt_figures']
-        out_path = os.path.join(data_dir, "time_series_OMNI")
-        filename = f"{onecme['cr_num']}_{onecme['cr_lon_init']}.pdf"
-        filepath = os.path.join(out_path, filename)
-        fig.savefig(filepath, bbox_inches='tight')
-        
         cme_out = model.cmes[0]
 
         # Compute the transit time
@@ -451,19 +438,13 @@ for duration in durations:
                                     Earth_R_km.to(u.solRad), rmin)
         
         #========================================================
-        t_ref = Time(onecme['CME_Time']).mjd
-        idx = np.argmin(np.abs(time1au - t_ref))
-        
-        # Set up the model at 21.5 rS with backmapped OMNI
-        #model = H.HUXt(v_boundary = vcarr_rmin[idx] * (u.km / u.s), cr_num=onecme['cr_num'], cr_lon_init=onecme['cr_lon_init'], simtime=10*u.day, latitude=0*u.deg, lon_out=0*u.deg, dt_scale=4, r_min=rmin)
-        
         model = Hin.set_time_dependent_boundary(vcarr_rmin, time1au, 
                             run_start, simtime = simtime, r_min=rmin, r_max=rmax, 
                             dt_scale=dt_scale, latitude=0*u.deg, frame = 'sidereal', 
                             track_cmes = True)
         
         cme = H.ConeCME(
-            t_launch=0.0 * u.day,
+            t_launch=13.6 * u.day,
             longitude=onecme['lon'] * u.deg,
             latitude=onecme['lat'] * u.deg,
             initial_height=rmin,
