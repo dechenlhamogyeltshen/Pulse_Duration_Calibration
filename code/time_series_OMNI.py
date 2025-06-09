@@ -288,7 +288,7 @@ for _, onecme in crlist.iterrows():
                         dt_scale=dt_scale, latitude=0*u.deg, frame = 'sidereal', 
                         track_cmes = True)
 
-    cme = H.ConeCME(t_launch=0.0 * u.day, 
+    cme = H.ConeCME(t_launch=13.6 * u.day, 
                     longitude=onecme['lon'] * u.deg, 
                     latitude=onecme['lat'] * u.deg, 
                     initial_height=rmin, 
