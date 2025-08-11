@@ -305,7 +305,7 @@ def spheroidal(onecme,model,rmin=rmin):
                     latitude=onecme['lat'] * u.deg,
                     initial_height=rmin,
                     width=2.0 * onecme['Ang_rad'] * u.deg,
-                    v=onecme['V'] * (u.km / u.s),
+                    v=onecme['V'] * 0.9 * (u.km / u.s),
                     thickness=0.0 * u.solRad,
                     cme_fixed_duration=False)
 
@@ -333,7 +333,7 @@ def fixed_duration(onecme,model,duration,rmin=rmin):
                     latitude=onecme['lat'] * u.deg,
                     initial_height=rmin,
                     width=2.0 * onecme['Ang_rad'] * u.deg,
-                    v=onecme['V'] * (u.km / u.s),
+                    v=onecme['V'] * 0.9 * (u.km / u.s),
                     thickness=0.0 * u.solRad,
                     cme_fixed_duration=True,
                     fixed_duration=duration * 60 * 60 * u.s)
