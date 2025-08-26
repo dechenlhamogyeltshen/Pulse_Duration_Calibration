@@ -5,13 +5,18 @@ import pandas as pd
 from datetime import datetime, timedelta
 from astropy.time import Time
 import re
+from sunpy.coordinates import sun
+import helio_coords as hcoords
+
+import joblib
+import onnxruntime as ort
 
 import huxt as H
 import huxt_inputs as Hin
 import huxt_analysis as HA
 
 #===============================================================================
-# --- ICME-CME data ------------------------------------------------------------
+# <codecell> Import ICME-CME data
 
 # Function to convert a date string to a datetime object
 def convert_to_datetime(date_str):
@@ -122,20 +127,24 @@ crlist['Y'] = crlist['angdist']/crlist['Ang_rad']
 print('N = ' + str(len(crlist)))
 
 #===============================================================================
+# <codecell> Create OMNI inner boundary conditions
+
 # --- Load ICME  ---------------------------------------------------------------
 
-icmelist_path = os.path.join(os.getcwd(),
+icmelist_path = os.path.join(project_dirs['input'],
                                 'Richardson_Cane_Processed_ICME_list.csv')
 
 #HUXt run parameters
 dt_scale = 4
-rmin = 21.5*u.solRad
+rmin = 10.0*u.solRad
 rmax = 230*u.solRad #outer boundary for HUXt runs
 
 recon_noicmes = True #whether to remove ICMEs
 icme_list = 'CaneRichardson'#'DONKI'
-icme_buffer = 0.1*u.day
+pre_icme_buffer = 0.2 #days
+post_icme_buffer = 1 #days
 sw_buffer = 2*u.day #window over which to average to fill in the solar wind during ICMEs
+
 #fill values for ICME removal if interpolation isn't possible
 vsw_fill = 450 *u.km/u.s
 bx_fill = 0
@@ -222,9 +231,51 @@ def ICMElist(filepath):
     return icmes
   
 
-#===============================================================================
+# --- Remove ICME and backmap OMNI solution to 10 solRad ----------------------
+def correct_inner_vlon_cnn_onnx(v_inner_array,
+                                data_dir=os.path.join(project_dirs['input'])):
+    """
+    Corrects solar wind speed as a function of longitude using a 1D CNN model
+    trained to account for stream interactions during backmapping from 1 AU 
+    to 0.1 AU. Uses ONNX, rather than pytorch.
 
-def preprocess_omni(cme,recon_noicmes=recon_noicmes, icme_list=icme_list, icmelist_path=icmelist_path, icme_buffer=icme_buffer, sw_buffer=sw_buffer, rmin=rmin):
+    Parameters:
+    - v_inner_array: np.ndarray of shape (128, N) [speed vs. longitude & samples]
+    - data_dir: directory containing saved scalers and ONNX model
+
+    Returns:
+    - Y_pred: np.ndarray of shape (128, N), CNN-corrected speed
+    """
+
+    # Load scalers
+    y_scaler = joblib.load(os.path.join(data_dir, 'y_scaler_torch.save'))
+    x_scaler = joblib.load(os.path.join(data_dir, 'x_scaler_torch.save'))
+
+    # Transpose input to shape (N, 128) so each row is a sample
+    vcarr_scaled = x_scaler.transform(v_inner_array.T)  # (N, 128)
+
+    # Reshape to ONNX expected input: (batch_size, channels=1, length=128)
+    X_input = vcarr_scaled[:, np.newaxis, :].astype(np.float32)  # (N, 1, 128)
+
+    # Load ONNX model
+    onnx_path = os.path.join(data_dir, 'CNN_model.onnx')
+    ort_session = ort.InferenceSession(onnx_path)
+
+    # Run inference
+    input_name = ort_session.get_inputs()[0].name
+    output = ort_session.run(None, {input_name: X_input})
+    Y_pred_scaled = output[0]  # (N, 1, 128)
+
+    # Postprocess: squeeze to (N, 128)
+    Y_pred_scaled = Y_pred_scaled.squeeze(1)
+
+    # Inverse transform
+    Y_pred = y_scaler.inverse_transform(Y_pred_scaled)  # (N, 128)
+
+    # Transpose back to (128, N) to match input shape
+    return Y_pred.T
+
+def preprocess_omni(cme):
     '''Download OMNI data and produce boundary conditions for a given CME'''
     
     # Download and process OMNI
@@ -251,7 +302,6 @@ def preprocess_omni(cme,recon_noicmes=recon_noicmes, icme_list=icme_list, icmeli
         omni = pd.concat([omni, datachunk], ignore_index=True)
         
     # Remove ICME from OMNI
-    obs = omni.copy()
     if recon_noicmes:
     
         #create a copy of the OMNI data for ICME removal, before any end padding
@@ -263,49 +313,94 @@ def preprocess_omni(cme,recon_noicmes=recon_noicmes, icme_list=icme_list, icmeli
             icmes = ICMElist(icmelist_path)
     
         #remove all ICMEs
-        omni_noicmes =  Hin.remove_ICMEs(omni, icmes, interpolate = True,
-                    icme_buffer = icme_buffer, interp_buffer = sw_buffer,
-                    params = ['V', 'BX_GSE'], fill_vals = None)
-      
-        #if the no icme data don't span a large enough time range, repeat the last 27 days
-        data_end_date = omni_noicmes['datetime'][len(omni_noicmes)-1]
-        if data_end_date < run_stop:
-            mask = (omni_noicmes['datetime'] >= data_end_date - timedelta(days = 27.27))
-            datachunk = omni_noicmes[mask]
-            datachunk.loc[:,'datetime'] = datachunk['datetime'] + timedelta(days = 27.27)
-            datachunk.loc[:,'mjd'] = datachunk['mjd'] + 27.27
-            #concatonate the dataframes
-            omni_noicmes = pd.concat([omni_noicmes, datachunk], ignore_index=True)
+        params = ['V', 'BX_GSE']
+        # first remove all ICMEs and add NaNs to the required parameters
+        icmes['shock_mjd'] = Time(icmes['Shock_time'].to_numpy()).mjd
+        icmes['end_mjd'] = Time(icmes['ICME_end'].to_numpy()).mjd
+    
+        for i in range(0, len(icmes)):
+
+            icme_start = icmes['shock_mjd'][i] - pre_icme_buffer
+            icme_stop = icmes['end_mjd'][i] + post_icme_buffer 
             
-        obs = omni_noicmes.copy()
+            mask_icme = ((omni_noicmes['mjd'] >= icme_start) &
+                         (omni_noicmes['mjd'] <= icme_stop))
+            
+            if any(mask_icme):
+                print('removing ICME #' + str(i))
+                for param in params:
+                    omni_noicmes.loc[mask_icme, param] = np.nan
+
+
+        #now interp through all datagaps
+        omni_noicmes = omni_noicmes.set_index('datetime')
+        omni_noicmes[['V', 'BX_GSE']] = omni_noicmes[['V', 'BX_GSE']].interpolate(method='time').ffill().bfill()
+        omni_noicmes = omni_noicmes.reset_index()
+        
+    #add the carrington longitude to the omni data
+    def remainder(cr_frac):
+        if np.isscalar(cr_frac):
+            return int(np.floor(cr_frac))
+        else:
+            return np.floor(cr_frac).astype(int)
+    cr_frac = sun.carrington_rotation_number(omni_noicmes['datetime'])
+    cr = remainder(cr_frac)
+    omni_noicmes['lon_carr'] = 2 * np.pi * (1 - (cr_frac - cr))    
+    
+    #create vCarr  with the omni time series at 1 AU
+    #======================================================
+    
+    #unwrap the carr long
+    unwrapped = np.unwrap(omni_noicmes['lon_carr'], discont=np.pi)
+    #find the current value
+    idx = np.argmin(np.abs(omni_noicmes['datetime'] - run_start))
+    curr_lon = unwrapped[idx] 
+    #find the data up to 2 pi previously 
+    mask = ((unwrapped < curr_lon + 2*np.pi) & (unwrapped >= curr_lon))
+    omni_chunk = omni_noicmes.loc[mask].reset_index(drop=True)
+    
+    #sort by carrington lon
+    omni_lon = omni_chunk.sort_values(by='lon_carr').reset_index(drop=True)
+    
+    #now map back to the inner boundary
+    Earth_R_km = hcoords.earth_R(Time(run_start).mjd) *u.km
+    vcarr_rmin_back = Hin.map_v_boundary_inwards(omni_lon['V'].to_numpy()*u.km/u.s, 
+                                    Earth_R_km.to(u.solRad), rmin)
+    
+    #interp to typical HUXt resolution
+    dphi = 2*np.pi/H.huxt_constants()['nlong']
+    longs = np.arange(dphi/2, 2*np.pi, dphi)
+    vlon = np.interp(longs, omni_lon['lon_carr'], vcarr_rmin_back)
+    
+    # apply the CNN to the backmapped data
+    vcarr_rmin_back_cnn = correct_inner_vlon_cnn_onnx(vlon.reshape(-1, 1))    
         
     # Set up inner boundary conditions for HUXt from corotation of OMNI
     # Create  vCarr array with the omni time series at 1 AU
-    time1au, v1au, b1au = Hin.generate_vCarr_from_OMNI(run_start, run_stop,
-                                                            omni_input =obs,
-                                                            corot_type='both')
+    #time1au, v1au, b1au = Hin.generate_vCarr_from_OMNI(run_start, run_stop, omni_input =obs,corot_type='both')
 
     #now map each timestep back to the inner boundary
-    vcarr_rmin = v1au.copy()
+    #vcarr_rmin = v1au.copy()
     
-    for i in range(0, len(time1au)):
+    #for i in range(0, len(time1au)):
         #get the Earth heliocentric distance at this time
-        Earth_R_km = earth_R(time1au[i]) *u.km
-        #Map from 215 rto 21.5 rS
-        vcarr_rmin[:,i] = Hin.map_v_boundary_inwards(v1au[:,i]*u.km/u.s,
-                                    Earth_R_km.to(u.solRad), rmin)
+        #Earth_R_km = earth_R(time1au[i]) *u.km
+        #Map from 215 rto 10.0 rS
+        #vcarr_rmin[:,i] = Hin.map_v_boundary_inwards(v1au[:,i]*u.km/u.s, Earth_R_km.to(u.solRad), rmin)
                                     
-    return simtime, vcarr_rmin, time1au, run_start
+    return simtime, vcarr_rmin_back_cnn, run_start
     
-def spheroidal(onecme,model,rmin=rmin):
+#===============================================================================
+# <codecell> Functions for spheroidal and fixed duration ConeCMEs
+def spheroidal(onecme,model,timeshift):
     '''Solve HUXt using a spheroidal cone CME'''
     
-    cme = H.ConeCME(t_launch=13.6 * u.day,
+    cme = H.ConeCME(t_launch=13.6 * u.day - timeshift,
                     longitude=onecme['lon'] * u.deg,
                     latitude=onecme['lat'] * u.deg,
                     initial_height=rmin,
                     width=2.0 * onecme['Ang_rad'] * u.deg,
-                    v=onecme['V'] * 0.9 * (u.km / u.s),
+                    v=onecme['V']* (u.km / u.s),
                     thickness=0.0 * u.solRad,
                     cme_fixed_duration=False)
 
@@ -325,15 +420,15 @@ def spheroidal(onecme,model,rmin=rmin):
     
     return tt, v_1au
     
-def fixed_duration(onecme,model,duration,rmin=rmin):
+def fixed_duration(onecme,model,timeshift,duration,rmin=rmin):
     '''Solve HUXt using a fixed pulse duration cone CME'''
     
-    cme = H.ConeCME(t_launch=13.6 * u.day,
+    cme = H.ConeCME(t_launch=13.6 * u.day - timeshift,
                     longitude=onecme['lon'] * u.deg,
                     latitude=onecme['lat'] * u.deg,
                     initial_height=rmin,
                     width=2.0 * onecme['Ang_rad'] * u.deg,
-                    v=onecme['V'] * 0.9 * (u.km / u.s),
+                    v=onecme['V'] * (u.km / u.s),
                     thickness=0.0 * u.solRad,
                     cme_fixed_duration=True,
                     fixed_duration=duration * 60 * 60 * u.s)
@@ -354,7 +449,9 @@ def fixed_duration(onecme,model,duration,rmin=rmin):
     
     return tt, v_1au
     
-#=====Run Model=========================================================
+#===============================================================================
+# <codecell> Run model
+
 # Initialize Data Storage
 transit_time = []
 arrival_speed = []
@@ -382,25 +479,35 @@ for _, onecme in crlist.iterrows():
     
     #========================================================
     # Obtain OMNI boundary conditions at 21.5 rS
-    simtime, vcarr_rmin, time1au, run_start = preprocess_omni(onecme)
+    simtime, vcarr_rmin_back_cnn, run_start = preprocess_omni(onecme)
+    
+    cr, cr_lon_init = Hin.datetime2huxtinputs(run_start)
     
     #========================================================
     # Set up the model at 21.5 rS with backmapped OMNI
-    model = Hin.set_time_dependent_boundary(vcarr_rmin, time1au,
-                        run_start, simtime = simtime, r_min=rmin, r_max=rmax,
-                        dt_scale=dt_scale, latitude=0*u.deg, frame = 'sidereal',
-                        track_cmes = True)
+    
+    model = H.HUXt(v_boundary = vcarr_rmin_back_cnn.flatten() * u.km/u.s,
+                         cr_num = cr, cr_lon_init=cr_lon_init,
+                         simtime = simtime, r_min=rmin, r_max=rmax, 
+                         dt_scale=dt_scale, latitude=0*u.deg, frame = 'synodic', 
+                         track_cmes = True, lon_out = 0*u.rad)
+    
+    #model = Hin.set_time_dependent_boundary(vcarr_rmin, time1au,
+                        #run_start, simtime = simtime, r_min=rmin, r_max=rmax,
+                        #dt_scale=dt_scale, latitude=0*u.deg, frame = 'sidereal',
+                        #track_cmes = True)
     
     #========================================================
     # Spheroidal cone cme
-    tt_val, as_val = spheroidal(onecme, model)
+    timeshift = (11.5 * u.solRad / (onecme['V'] * u.km/u.s)).to(u.day)
+    tt_val, as_val = spheroidal(onecme, model, timeshift)
     sph_tt_row.append(tt_val)
     sph_as_row.append(as_val)
     
     #========================================================
     # Fixed duration cone cmes
     for i, duration in enumerate(durations):
-        tt_val, as_val = fixed_duration(onecme, model, duration)
+        tt_val, as_val = fixed_duration(onecme, model, timeshift, duration)
         tt_rows[i].append(tt_val)
         v_rows[i].append(as_val)
     
@@ -411,8 +518,6 @@ arrival_speed.extend(v_rows)
 
 #==============================================================
 # Save results
-data_dir = project_dirs['output']
-out_path = os.path.join(data_dir)
 
-pd.DataFrame(transit_time).to_csv(os.path.join(out_path,"cme_transit_time.csv"), index=False, header=False)
-pd.DataFrame(arrival_speed).to_csv(os.path.join(out_path,"cme_arrival_speed.csv"), index=False, header=False)
+pd.DataFrame(transit_time).to_csv(os.path.join(project_dirs['output'],"cme_transit_time.csv"), index=False, header=False)
+pd.DataFrame(arrival_speed).to_csv(os.path.join(project_dirs['output'],"cme_arrival_speed.csv"), index=False, header=False)
