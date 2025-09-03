@@ -136,7 +136,7 @@ icmelist_path = os.path.join(project_dirs['input'],
 
 #HUXt run parameters
 dt_scale = 4
-rmin = 10.0*u.solRad
+rmin = 21.5*u.solRad
 rmax = 230*u.solRad #outer boundary for HUXt runs
 
 recon_noicmes = True #whether to remove ICMEs
@@ -395,7 +395,7 @@ def preprocess_omni(cme):
 def spheroidal(onecme,model,timeshift):
     '''Solve HUXt using a spheroidal cone CME'''
     
-    cme = H.ConeCME(t_launch=13.6 * u.day - timeshift,
+    cme = H.ConeCME(t_launch=13.6 * u.day,
                     longitude=onecme['lon'] * u.deg,
                     latitude=onecme['lat'] * u.deg,
                     initial_height=rmin,
@@ -423,7 +423,7 @@ def spheroidal(onecme,model,timeshift):
 def fixed_duration(onecme,model,timeshift,duration,rmin=rmin):
     '''Solve HUXt using a fixed pulse duration cone CME'''
     
-    cme = H.ConeCME(t_launch=13.6 * u.day - timeshift,
+    cme = H.ConeCME(t_launch=13.6 * u.day,
                     longitude=onecme['lon'] * u.deg,
                     latitude=onecme['lat'] * u.deg,
                     initial_height=rmin,
