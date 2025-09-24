@@ -402,6 +402,7 @@ def spheroidal(onecme,model,timeshift):
                     width=2.0 * onecme['Ang_rad'] * u.deg,
                     v=onecme['V']* (u.km / u.s),
                     thickness=0.0 * u.solRad,
+                    cme_expansion=True,
                     cme_fixed_duration=False)
 
     model.solve([cme])
@@ -430,6 +431,7 @@ def fixed_duration(onecme,model,timeshift,duration,rmin=rmin):
                     width=2.0 * onecme['Ang_rad'] * u.deg,
                     v=onecme['V'] * (u.km / u.s),
                     thickness=0.0 * u.solRad,
+                    cme_expansion=True,
                     cme_fixed_duration=True,
                     fixed_duration=duration * 60 * 60 * u.s)
 
@@ -466,7 +468,7 @@ arrival_speed.append(['Velocity'] + list(crlist['V']))
 transit_time.append(['Observed'] + list(crlist['tt_21']))
 arrival_speed.append(['Observed'] + list(crlist['V_ICME']))
 
-durations = np.arange(0.1, 20.0, 0.1)  # CME durations in hours
+durations = np.arange(0.1, 20.0, 0.5)  # CME durations in hours
 
 # Pre-initialize rows
 sph_tt_row = ['Spheroidal']
