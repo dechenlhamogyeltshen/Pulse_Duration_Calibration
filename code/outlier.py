@@ -79,7 +79,7 @@ project_dirs = H._setup_dirs_()
 crpath = os.path.join(project_dirs['input'],'(I)CMEs_SingleEvents.csv')
 
 # Load the CSV file into a DataFrame
-crlist = pd.read_csv(crpath)
+crlist = pd.read_csv(crpath,skiprows=lambda x: x not in [0, 56])
 
 # Convert date columns to datetime objects using datetime library
 date_columns = ['CME_Time', 'Time_21.5', 'ICME_Start_Time', 'ICME_End_Time', 'Disturbance_Time']
@@ -392,34 +392,6 @@ def preprocess_omni(cme):
     
 #===============================================================================
 # <codecell> Functions for spheroidal and fixed duration ConeCMEs
-def spheroidal(onecme,model):
-    '''Solve HUXt using a spheroidal cone CME'''
-    
-    cme = H.ConeCME(t_launch=13.6 * u.day,
-                    longitude=onecme['lon'] * u.deg,
-                    latitude=onecme['lat'] * u.deg,
-                    initial_height=rmin,
-                    width=2.0 * onecme['Ang_rad'] * u.deg,
-                    v=onecme['V']* (u.km / u.s),
-                    thickness=0.0 * u.solRad,
-                    cme_expansion=False,
-                    cme_fixed_duration=False)
-
-    model.solve([cme])
-    cme_out = model.cmes[0]
-
-    # Compute the transit time
-    stats = cme_out.compute_arrival_at_body('EARTH')
-    tt = stats['t_transit'].value
-    arrival_time = stats['t_arrive']
-    
-    # Find the arrival speed within 1 day of arrival
-    earth_series = HA.get_observer_timeseries(model, observer='Earth')
-    mask = (Time(earth_series['time']) >= arrival_time) & (
-            Time(earth_series['time']) <= arrival_time + 3 * u.day)
-    v_1au = earth_series.loc[mask, 'vsw'].max()
-    
-    return tt, v_1au
     
 def fixed_duration(onecme,model,duration,rmin=rmin):
     '''Solve HUXt using a fixed pulse duration cone CME'''
@@ -437,6 +409,7 @@ def fixed_duration(onecme,model,duration,rmin=rmin):
 
     model.solve([cme])
     cme_out = model.cmes[0]
+    HA.animate(model, tag='cone_cme_test')
 
     # Compute the transit time
     stats = cme_out.compute_arrival_at_body('EARTH')
@@ -449,32 +422,14 @@ def fixed_duration(onecme,model,duration,rmin=rmin):
             Time(earth_series['time']) <= arrival_time + 3 * u.day)
     v_1au = earth_series.loc[mask, 'vsw'].max()
     
-    return tt, v_1au
+    print(onecme['ICME_Start_Time'],tt,v_1au)
+    
+    return
     
 #===============================================================================
 # <codecell> Run model
 
-# Initialize Data Storage
-transit_time = []
-arrival_speed = []
-
-# First three rows
-transit_time.append(['Angular_Width'] + list(crlist['Ang_rad']))
-arrival_speed.append(['Angular_Width'] + list(crlist['Ang_rad']))
-
-transit_time.append(['Velocity'] + list(crlist['V']))
-arrival_speed.append(['Velocity'] + list(crlist['V']))
-
-transit_time.append(['Observed'] + list(crlist['tt_21']))
-arrival_speed.append(['Observed'] + list(crlist['V_ICME']))
-
-durations = np.arange(0.1, 20.0, 0.5)  # CME durations in hours
-
-# Pre-initialize rows
-sph_tt_row = ['Spheroidal']
-sph_as_row = ['Spheroidal']
-tt_rows = [[f"tt_{d:.1f}h"] for d in durations]
-v_rows = [[f"v_{d:.1f}h"] for d in durations]
+duration = 10.6  # CME durations in hours
     
 # Iterate over all CMEs in crlist
 for _, onecme in crlist.iterrows():
@@ -489,10 +444,10 @@ for _, onecme in crlist.iterrows():
     # Set up the model at 21.5 rS with backmapped OMNI
     
     model = H.HUXt(v_boundary = vcarr_rmin_back_cnn.flatten() * u.km/u.s,
-                         cr_num = cr, cr_lon_init=cr_lon_init,
+                         cr_num = cr,
                          simtime = simtime, r_min=rmin, r_max=rmax, 
                          dt_scale=dt_scale, latitude=0*u.deg, frame = 'synodic', 
-                         track_cmes = True, lon_out = 0*u.rad)
+                         track_cmes = True)
     
     #model = Hin.set_time_dependent_boundary(vcarr_rmin, time1au,
                         #run_start, simtime = simtime, r_min=rmin, r_max=rmax,
@@ -501,29 +456,4 @@ for _, onecme in crlist.iterrows():
     
     #========================================================
     # Spheroidal cone cme
-    timeshift = (11.5 * u.solRad / (onecme['V'] * u.km/u.s)).to(u.day)
-    sph_tt_val = np.nan
-    sph_as_val = np.nan
-    sph_tt_val, sph_as_val = spheroidal(onecme, model)
-    sph_tt_row.append(tt_val)
-    sph_as_row.append(as_val)
-    
-    #========================================================
-    # Fixed duration cone cmes
-    for i, duration in enumerate(durations):
-        tt_val = np.nan
-        as_val = np.nan
-        tt_val, as_val = fixed_duration(onecme, model, timeshift, duration)
-        tt_rows[i].append(tt_val)
-        v_rows[i].append(as_val)
-    
-transit_time.append(sph_tt_row)
-arrival_speed.append(sph_as_row)
-transit_time.extend(tt_rows)
-arrival_speed.extend(v_rows)
-
-#==============================================================
-# Save results
-
-pd.DataFrame(transit_time).to_csv(os.path.join(project_dirs['output'],"cme_transit_time.csv"), index=False, header=False)
-pd.DataFrame(arrival_speed).to_csv(os.path.join(project_dirs['output'],"cme_arrival_speed.csv"), index=False, header=False)
+    fixed_duration(onecme,model,duration)
