@@ -505,8 +505,8 @@ for _, onecme in crlist.iterrows():
     sph_tt_val = np.nan
     sph_as_val = np.nan
     sph_tt_val, sph_as_val = spheroidal(onecme, model)
-    sph_tt_row.append(tt_val)
-    sph_as_row.append(as_val)
+    sph_tt_row.append(sph_tt_val)
+    sph_as_row.append(sph_as_val)
     
     #========================================================
     # Fixed duration cone cmes
