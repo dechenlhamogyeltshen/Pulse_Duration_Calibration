@@ -513,7 +513,7 @@ for _, onecme in crlist.iterrows():
     for i, duration in enumerate(durations):
         tt_val = np.nan
         as_val = np.nan
-        tt_val, as_val = fixed_duration(onecme, model, timeshift, duration)
+        tt_val, as_val = fixed_duration(onecme, model,duration)
         tt_rows[i].append(tt_val)
         v_rows[i].append(as_val)
     
