@@ -409,18 +409,12 @@ def fixed_duration(onecme,model,duration,rmin=rmin):
 
     model.solve([cme])
     cme_out = model.cmes[0]
-    #HA.animate(model, tag='cone_cme_test')
+    HA.animate(model, tag='cone_cme_test')
 
     # Compute the transit time
     stats = cme_out.compute_arrival_at_body('EARTH')
     tt = stats['t_transit'].value
-    arrival_time = stats['t_arrive']
-    
-    # Find the arrival speed within 1 day of arrival
-    earth_series = HA.get_observer_timeseries(model, observer='Earth')
-    mask = (Time(earth_series['time']) >= arrival_time) & (
-            Time(earth_series['time']) <= arrival_time + 3 * u.day)
-    v_1au = earth_series.loc[mask, 'vsw'].max()
+    v_1au = stats['v'].value
     
     print(onecme['ICME_Start_Time'],tt,v_1au)
     
@@ -444,7 +438,7 @@ for _, onecme in crlist.iterrows():
     # Set up the model at 21.5 rS with backmapped OMNI
     
     model = H.HUXt(v_boundary = vcarr_rmin_back_cnn.flatten() * u.km/u.s,
-                         cr_num = cr, cr_lon_init=cr_lon_init,
+                         cr_num = cr, cr_lon_init = cr_lon_init,
                          simtime = simtime, r_min=rmin, r_max=rmax, 
                          dt_scale=dt_scale, latitude=0*u.deg, frame = 'synodic', 
                          track_cmes = True)
