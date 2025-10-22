@@ -489,7 +489,7 @@ for _, onecme in crlist.iterrows():
     # Set up the model at 21.5 rS with backmapped OMNI
     
     model = H.HUXt(v_boundary = vcarr_rmin_back_cnn.flatten() * u.km/u.s,
-                         cr_num = cr, cr_lon_init=cr_lon_init,
+                         cr_num = cr,
                          simtime = simtime, r_min=rmin, r_max=rmax, 
                          dt_scale=dt_scale, latitude=0*u.deg, frame = 'synodic', 
                          track_cmes = True, lon_out = 0*u.rad)

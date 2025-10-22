@@ -79,7 +79,7 @@ project_dirs = H._setup_dirs_()
 crpath = os.path.join(project_dirs['input'],'(I)CMEs_SingleEvents.csv')
 
 # Load the CSV file into a DataFrame
-crlist = pd.read_csv(crpath,skiprows=lambda x: x not in [0, 56])
+crlist = pd.read_csv(crpath,skiprows=lambda x: x not in [0, 40])
 
 # Convert date columns to datetime objects using datetime library
 date_columns = ['CME_Time', 'Time_21.5', 'ICME_Start_Time', 'ICME_End_Time', 'Disturbance_Time']
@@ -404,12 +404,12 @@ def fixed_duration(onecme,model,duration,rmin=rmin):
                     v=onecme['V'] * (u.km / u.s),
                     thickness=0.0 * u.solRad,
                     cme_expansion=False,
-                    cme_fixed_duration=True,
+                    cme_fixed_duration=False,
                     fixed_duration=duration * 60 * 60 * u.s)
 
     model.solve([cme])
     cme_out = model.cmes[0]
-    HA.animate(model, tag='cone_cme_test')
+    #HA.animate(model, tag='cone_cme_test')
 
     # Compute the transit time
     stats = cme_out.compute_arrival_at_body('EARTH')
@@ -444,7 +444,7 @@ for _, onecme in crlist.iterrows():
     # Set up the model at 21.5 rS with backmapped OMNI
     
     model = H.HUXt(v_boundary = vcarr_rmin_back_cnn.flatten() * u.km/u.s,
-                         cr_num = cr,
+                         cr_num = cr, cr_lon_init=cr_lon_init,
                          simtime = simtime, r_min=rmin, r_max=rmax, 
                          dt_scale=dt_scale, latitude=0*u.deg, frame = 'synodic', 
                          track_cmes = True)
