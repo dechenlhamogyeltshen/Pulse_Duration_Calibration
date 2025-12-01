@@ -98,7 +98,7 @@ for column in date_columns:
 # compute 21.5-215 transit time
 crlist['tt_21'] = np.nan 
 for irow in range(0, len(crlist)):
-    crlist.loc[irow,'tt_21'] = crlist.loc[irow,'Disturbance_Time'] - crlist.loc[irow,'Time_21.5']
+    crlist.loc[irow,'tt_21'] = crlist.loc[irow,'ICME_Start_Time'] - crlist.loc[irow,'Time_21.5']
 # Convert  from timedelta to days
 crlist['tt_21'] = crlist['tt_21'].apply(lambda x: x.days + x.seconds / 86400 if isinstance(x, timedelta) else None)
 
@@ -279,7 +279,7 @@ def preprocess_omni(cme):
     '''Download OMNI data and produce boundary conditions for a given CME'''
     
     # Download and process OMNI
-    icme_time = cme['CME_Time']
+    icme_time = cme['Time_21.5']
     
     # Compute the run start and end times so that the ICME is in the centre of the window
     run_start = icme_time - timedelta(days=13.6)
