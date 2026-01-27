@@ -76,7 +76,7 @@ def get_earth_lat(dt):
 # --- Load data ----------------------------------------------------------------
 # Read in Blair's pairing on DONKI and CR2003
 project_dirs = H._setup_dirs_()
-crpath = os.path.join(project_dirs['input'],'(I)CMEs_SingleEvents.csv')
+crpath = os.path.join(project_dirs['input'],'(I)CME_filtered.csv')
 
 # Load the CSV file into a DataFrame
 crlist = pd.read_csv(crpath)
