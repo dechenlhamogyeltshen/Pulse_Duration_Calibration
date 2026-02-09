@@ -1836,9 +1836,10 @@ def _upwind_step_(v_up, v_dn, dtdr, alpha, r_accel, rrel):
         v_source = v_dn[i] / denom
 
         # Residual acceleration
-        v_diff = 0.0
-        if v_source < 650.0:
-            v_diff = alpha * v_source * (np.exp(accel_arg) - np.exp(accel_arg_p))
+        v_diff = alpha * v_source * (np.exp(accel_arg) - np.exp(accel_arg_p))
+        #v_diff = 0.0
+        #if v_source < 650.0:
+            #v_diff = alpha * v_source * (np.exp(accel_arg) - #np.exp(accel_arg_p))
 
         # Add residual acceleration to upwind step
         v_up_next[i] += v_dn[i] * dtdr * v_diff
