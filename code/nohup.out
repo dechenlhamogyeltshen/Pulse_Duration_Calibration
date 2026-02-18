@@ -1,174 +1,0 @@
-/home/wo831335/Pulse_Duration_Calibration/code/rc_met.py:94: FutureWarning: Setting an item of incompatible dtype is deprecated and will raise an error in a future version of pandas. Value '3 days 20:29:00' has dtype incompatible with float64, please explicitly cast to a compatible dtype first.
-  crlist.loc[irow,'tt_21'] = crlist.loc[irow,'Disturbance_Time'] - crlist.loc[irow,'Time_21.5']
-Files Downloaded:   0%|          | 0/1 [00:00<?, ?file/s]Files Downloaded: 100%|██████████| 1/1 [00:00<00:00,  2.89file/s]Files Downloaded: 100%|██████████| 1/1 [00:00<00:00,  2.88file/s]
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.92file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.80file/s]
-removing ICME #549
-removing ICME #550
-removing ICME #551
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.94file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.57file/s]
-/opt/miniconda3/envs/omni_cnn_huxt/lib/python3.9/site-packages/erfa/core.py:133: ErfaWarning: ERFA function "dtf2d" yielded 1 of "dubious year (Note 6)"
-  warn(f'ERFA function "{func_name}" yielded {wmsg}', ErfaWarning)
-removing ICME #550
-removing ICME #551
-removing ICME #552
-removing ICME #553
-removing ICME #554
-removing ICME #555
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  4.00file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.99file/s]
-/opt/miniconda3/envs/omni_cnn_huxt/lib/python3.9/site-packages/erfa/core.py:133: ErfaWarning: ERFA function "dtf2d" yielded 1 of "dubious year (Note 6)"
-  warn(f'ERFA function "{func_name}" yielded {wmsg}', ErfaWarning)
-removing ICME #550
-removing ICME #551
-removing ICME #552
-removing ICME #553
-removing ICME #554
-removing ICME #555
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  4.02file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.95file/s]
-removing ICME #550
-removing ICME #551
-removing ICME #552
-removing ICME #553
-removing ICME #554
-removing ICME #555
-removing ICME #556
-removing ICME #557
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.95file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.61file/s]
-removing ICME #556
-removing ICME #557
-removing ICME #558
-removing ICME #559
-removing ICME #560
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.95file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.83file/s]
-removing ICME #556
-removing ICME #557
-removing ICME #558
-removing ICME #559
-removing ICME #560
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.82file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.59file/s]
-removing ICME #561
-removing ICME #562
-removing ICME #563
-removing ICME #564
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.99file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.85file/s]
-removing ICME #561
-removing ICME #562
-removing ICME #563
-removing ICME #564
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.95file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.84file/s]
-removing ICME #561
-removing ICME #562
-removing ICME #563
-removing ICME #564
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.91file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.78file/s]
-removing ICME #565
-removing ICME #566
-removing ICME #567
-removing ICME #568
-removing ICME #569
-removing ICME #570
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.90file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.73file/s]
-removing ICME #565
-removing ICME #566
-removing ICME #567
-removing ICME #568
-removing ICME #569
-removing ICME #570
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.94file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.84file/s]
-removing ICME #566
-removing ICME #567
-removing ICME #568
-removing ICME #569
-removing ICME #570
-removing ICME #571
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.93file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.10file/s]
-removing ICME #570
-removing ICME #571
-removing ICME #572
-Files Downloaded:   0%|          | 0/1 [00:00<?, ?file/s]Files Downloaded: 100%|██████████| 1/1 [00:00<00:00,  3.94file/s]Files Downloaded: 100%|██████████| 1/1 [00:00<00:00,  3.92file/s]
-/opt/miniconda3/envs/omni_cnn_huxt/lib/python3.9/site-packages/erfa/core.py:133: ErfaWarning: ERFA function "dtf2d" yielded 1 of "dubious year (Note 6)"
-  warn(f'ERFA function "{func_name}" yielded {wmsg}', ErfaWarning)
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  2.82file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  5.61file/s]
-removing ICME #549
-removing ICME #550
-removing ICME #551
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.93file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.71file/s]
-/opt/miniconda3/envs/omni_cnn_huxt/lib/python3.9/site-packages/erfa/core.py:133: ErfaWarning: ERFA function "dtf2d" yielded 1 of "dubious year (Note 6)"
-  warn(f'ERFA function "{func_name}" yielded {wmsg}', ErfaWarning)
-removing ICME #550
-removing ICME #551
-removing ICME #552
-removing ICME #553
-removing ICME #554
-removing ICME #555
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.95file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.79file/s]
-removing ICME #550
-removing ICME #551
-removing ICME #552
-removing ICME #553
-removing ICME #554
-removing ICME #555
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.90file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.33file/s]
-removing ICME #550
-removing ICME #551
-removing ICME #552
-removing ICME #553
-removing ICME #554
-removing ICME #555
-removing ICME #556
-removing ICME #557
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.94file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.55file/s]
-removing ICME #556
-removing ICME #557
-removing ICME #558
-removing ICME #559
-removing ICME #560
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.92file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.80file/s]
-removing ICME #556
-removing ICME #557
-removing ICME #558
-removing ICME #559
-removing ICME #560
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.51file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  6.97file/s]
-removing ICME #561
-removing ICME #562
-removing ICME #563
-removing ICME #564
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.94file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.80file/s]
-/opt/miniconda3/envs/omni_cnn_huxt/lib/python3.9/site-packages/erfa/core.py:133: ErfaWarning: ERFA function "dtf2d" yielded 1 of "dubious year (Note 6)"
-  warn(f'ERFA function "{func_name}" yielded {wmsg}', ErfaWarning)
-removing ICME #561
-removing ICME #562
-removing ICME #563
-removing ICME #564
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.90file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.79file/s]
-removing ICME #561
-removing ICME #562
-removing ICME #563
-removing ICME #564
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.35file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  6.67file/s]
-removing ICME #565
-removing ICME #566
-removing ICME #567
-removing ICME #568
-removing ICME #569
-removing ICME #570
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.93file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.80file/s]
-removing ICME #565
-removing ICME #566
-removing ICME #567
-removing ICME #568
-removing ICME #569
-removing ICME #570
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.96file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.81file/s]
-/opt/miniconda3/envs/omni_cnn_huxt/lib/python3.9/site-packages/erfa/core.py:133: ErfaWarning: ERFA function "dtf2d" yielded 1 of "dubious year (Note 6)"
-  warn(f'ERFA function "{func_name}" yielded {wmsg}', ErfaWarning)
-removing ICME #566
-removing ICME #567
-removing ICME #568
-removing ICME #569
-removing ICME #570
-removing ICME #571
-Files Downloaded:   0%|          | 0/2 [00:00<?, ?file/s]Files Downloaded:  50%|█████     | 1/2 [00:00<00:00,  3.93file/s]Files Downloaded: 100%|██████████| 2/2 [00:00<00:00,  7.62file/s]
-removing ICME #570
-removing ICME #571
-removing ICME #572
