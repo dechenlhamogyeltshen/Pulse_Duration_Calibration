@@ -443,7 +443,7 @@ def fixed_duration_met(onecme,model,duration,rmin=rmin):
 transit_time_rc = []
 arrival_speed_rc = []
 transit_time_met = []
-arrial_speed_met = []
+arrival_speed_met = []
 
 # First row for observation
 transit_time_rc.append(['Observed'] + list(crlist['tt_21']))
