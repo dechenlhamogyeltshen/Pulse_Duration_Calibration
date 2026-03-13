@@ -7,6 +7,7 @@ from astropy.time import Time
 import re
 from sunpy.coordinates import sun
 import helio_coords as hcoords
+import matplotlib.pyplot as plt
 
 import joblib
 import onnxruntime as ort
@@ -73,16 +74,84 @@ def get_earth_lat(dt):
     E_lat = E_lat.to(u.deg)  # Convert to degrees
     return E_lat
     
+def plot_earth_timeseries(model, modelbg, plot_omni=True):
+    """
+    A function to plot the HUXt Earth time series. With option to download and plot OMNI data.
+    Args:
+        model : input model class
+        plot_omni: Boolean, if True downloads and plots OMNI data
+
+    Returns:
+        fig : Figure handle
+        axs : Axes handles
+
+    """
+
+    huxt_ts = HA.get_observer_timeseries(model, observer='Earth')
+    ts_bg = HA.get_observer_timeseries(modelbg, observer='Earth')
+    cme_out = model.cmes[0]
+    stats = cme_out.compute_arrival_at_location(0.0 * u.rad, 215.0 * u.solRad)
+    hit = stats['hit']
+    if hit == 1:
+        t_arrive = stats['t_arrive'].value
+        t_arrive = Time(t_arrive, format='jd', scale='utc')
+
+    # 2-panel plot if the B polarity has been traced
+    if hasattr(model, 'b_grid'):
+        fig, axs = plt.subplots(2, 1, figsize=(14, 7))
+        axs[1].plot(huxt_ts['time'], np.sign(huxt_ts['bpol']), 'k.', label='HUXt')
+        axs[1].set_ylabel('B polarity')
+    else:
+        fig, axs = plt.subplots(1, 1, figsize=(14, 4))
+        axs = np.array([axs])
+
+    axs[0].plot(huxt_ts['time'], huxt_ts['vsw'], 'k', label='HUXt')
+    axs[0].plot(ts_bg['time'], ts_bg['vsw'], 'k', linestyle='dotted', label='No CME')
+    if  hit == 1:
+        axs[0].axvline(t_arrive.datetime,color='k')
+    axs[0].set_ylim(250, 1000)
+
+    starttime = huxt_ts['time'][0]
+    endtime = huxt_ts['time'][(len(huxt_ts)/2)-0.5]
+
+    if plot_omni:
+        # grab the omni data
+        data = Hin.get_omni(starttime, endtime)
+        # plot the period of interest
+        mask = (data['datetime'] >= starttime) & (data['datetime'] <= endtime)
+        plotdata = data[mask]
+        axs[0].plot(plotdata['datetime'], plotdata['V'], 'r', label='OMNI')
+
+        if hasattr(model, 'b_grid'):
+            axs[1].plot(plotdata['datetime'], -np.sign(plotdata['BX_GSE']) * 0.92, 'r.', label='OMNI')
+            axs[1].set_ylim(-1.1, 1.1)
+
+    for a in axs:
+        a.set_xlim(starttime, endtime)
+        a.legend()
+
+    axs[0].set_ylabel('Solar Wind Speed (km/s)')
+
+    if axs.size == 1:
+        axs[0].set_xlabel('Date')
+    elif axs.size == 2:
+        axs[0].set_xticklabels([])
+        axs[1].set_xlabel('Date')
+
+    fig.subplots_adjust(left=0.07, bottom=0.08, right=0.99, top=0.97, hspace=0.05)
+
+    return fig, axs
+    
 # --- Load data ----------------------------------------------------------------
 # Read in Blair's pairing on DONKI and CR2003
 project_dirs = H._setup_dirs_()
-crpath = os.path.join(project_dirs['input'],'(I)CMEs_SingleEvents.csv')
+crpath = os.path.join(project_dirs['input'],'rc_met.csv')
 
 # Load the CSV file into a DataFrame
 crlist = pd.read_csv(crpath)
 
 # Convert date columns to datetime objects using datetime library
-date_columns = ['CME_Time', 'Time_21.5', 'ICME_Start_Time', 'ICME_End_Time', 'Disturbance_Time']
+date_columns = ['CME_Time', 'Time_21.5', 'Time_met', 'Disturbance_Time', 'ICME_Start_Time']
 for column in date_columns:
     crlist[column] = crlist[column].apply(lambda x: convert_to_datetime(x) if isinstance(x, str) else None)
 
@@ -102,29 +171,10 @@ for irow in range(0, len(crlist)):
 # Convert  from timedelta to days
 crlist['tt_21'] = crlist['tt_21'].apply(lambda x: x.days + x.seconds / 86400 if isinstance(x, timedelta) else None)
 
-crlist['duration_1au'] = np.nan 
-for irow in range(0, len(crlist)):
-    crlist.loc[irow,'duration_1au'] =  crlist.loc[irow,'ICME_End_Time'] - crlist.loc[irow,'ICME_Start_Time']
-# Convert  from timedelta to days
-crlist['duration_1au'] = crlist['duration_1au'].apply(lambda x: x.days + x.seconds / 86400 if isinstance(x, timedelta) else None)
-
 # Add a new column with carrington rotation number of CME time
 crlist['cr_num'] = crlist['CME_Time'].apply(lambda dt: Hin.datetime2huxtinputs(dt)[0])
 crlist['cr_lon_init'] = crlist['CME_Time'].apply(lambda dt: Hin.datetime2huxtinputs(dt)[1])
 crlist['earth_lat'] = crlist['CME_Time'].apply(lambda dt: get_earth_lat(dt))
-
-# Drop rows where the absolute value of Time_Error_Days is greater than 2 hours
-# crlist = crlist[abs(crlist['Time_Error_Days']) <= 0.08]
-# crlist = crlist.reset_index()
-
-# print('N = ' + str(len(crlist)))
-
-# Drop rows where angular radius is shorter than angular distance
-crlist['angdist'] = np.sqrt(crlist['lat']*crlist['lat'] + crlist['lon']*crlist['lon'])
-crlist['Y'] = crlist['angdist']/crlist['Ang_rad']
-#crlist = crlist[abs(crlist['Y']) <= 1.0]
-
-print('N = ' + str(len(crlist)))
 
 #===============================================================================
 # <codecell> Create OMNI inner boundary conditions
@@ -136,7 +186,7 @@ icmelist_path = os.path.join(project_dirs['input'],
 
 #HUXt run parameters
 dt_scale = 4
-rmin = 10.0*u.solRad
+rmin = 21.5*u.solRad
 rmax = 230*u.solRad #outer boundary for HUXt runs
 
 recon_noicmes = True #whether to remove ICMEs
@@ -275,31 +325,20 @@ def correct_inner_vlon_cnn_onnx(v_inner_array,
     # Transpose back to (128, N) to match input shape
     return Y_pred.T
 
-def preprocess_omni(cme):
+def preprocess_omni(cme,data_source):
     '''Download OMNI data and produce boundary conditions for a given CME'''
     
     # Download and process OMNI
-    icme_time = cme['CME_Time']
+    if data_source=='rc':
+        icme_time = cme['Time_21.5']
+    elif data_source=='met':
+        icme_time = cme['Time_met']
     
     # Compute the run start and end times so that the ICME is in the centre of the window
-    run_start = icme_time - timedelta(days=13.6)
-    run_stop =  icme_time + timedelta(days=13.6)
-    simtime = (run_stop-run_start).days * u.day
-
-    # Download an additional 28 days either side
-    dl_starttime = run_start - timedelta(days=28)
-    dl_endtime = run_stop + timedelta(days=28)
+    simtime = 27.27 * u.day
+    dl_starttime = icme_time - timedelta(days=28)
+    dl_endtime = icme_time
     omni = Hin.get_omni(dl_starttime, dl_endtime)
-
-    #If the data don't span a large enough time range, repeat the last 27 days
-    data_end_date = omni['datetime'][len(omni)-1]
-    if data_end_date < run_stop:
-        mask = (omni['datetime'] >= data_end_date - timedelta(days = 27.27))
-        datachunk = omni[mask]
-        datachunk.loc[:,'datetime'] = datachunk['datetime'] + timedelta(days = 27.27)
-        datachunk.loc[:,'mjd'] = datachunk['mjd'] + 27.27
-        #concatonate the dataframes
-        omni = pd.concat([omni, datachunk], ignore_index=True)
         
     # Remove ICME from OMNI
     if recon_noicmes:
@@ -353,8 +392,8 @@ def preprocess_omni(cme):
     #unwrap the carr long
     unwrapped = np.unwrap(omni_noicmes['lon_carr'], discont=np.pi)
     #find the current value
-    idx = np.argmin(np.abs(omni_noicmes['datetime'] - run_start))
-    curr_lon = unwrapped[idx] 
+    idx = np.argmin(np.abs(omni_noicmes['datetime'] - icme_time))
+    curr_lon = unwrapped[idx]
     #find the data up to 2 pi previously 
     mask = ((unwrapped < curr_lon + 2*np.pi) & (unwrapped >= curr_lon))
     omni_chunk = omni_noicmes.loc[mask].reset_index(drop=True)
@@ -363,8 +402,8 @@ def preprocess_omni(cme):
     omni_lon = omni_chunk.sort_values(by='lon_carr').reset_index(drop=True)
     
     #now map back to the inner boundary
-    Earth_R_km = hcoords.earth_R(Time(run_start).mjd) *u.km
-    vcarr_rmin_back = Hin.map_v_boundary_inwards(omni_lon['V'].to_numpy()*u.km/u.s, 
+    Earth_R_km = hcoords.earth_R(Time(icme_time).mjd) *u.km
+    vcarr_rmin_back = Hin.map_v_boundary_inwards(omni_lon['V'].to_numpy()*u.km/u.s,
                                     Earth_R_km.to(u.solRad), rmin)
     
     #interp to typical HUXt resolution
@@ -388,7 +427,7 @@ def preprocess_omni(cme):
         #Map from 215 rto 10.0 rS
         #vcarr_rmin[:,i] = Hin.map_v_boundary_inwards(v1au[:,i]*u.km/u.s, Earth_R_km.to(u.solRad), rmin)
                                     
-    return simtime, vcarr_rmin_back_cnn, run_start
+    return simtime, vcarr_rmin_back_cnn, icme_time
     
 #===============================================================================
 
@@ -397,7 +436,7 @@ for _, onecme in crlist.iterrows():
     
     #========================================================
     # Obtain OMNI boundary conditions at 21.5 rS
-    simtime, vcarr_rmin_back_cnn, run_start = preprocess_omni(onecme)
+    simtime, vcarr_rmin_back_cnn, run_start = preprocess_omni(onecme, data_source='rc')
     
     cr, cr_lon_init = Hin.datetime2huxtinputs(run_start)
     
@@ -409,6 +448,12 @@ for _, onecme in crlist.iterrows():
                          simtime = simtime, r_min=rmin, r_max=rmax, 
                          dt_scale=dt_scale, latitude=0*u.deg, frame = 'synodic', 
                          track_cmes = True, lon_out = 0*u.rad)
+                         
+    modelbg = H.HUXt(v_boundary = vcarr_rmin_back_cnn.flatten() * u.km/u.s,
+                         cr_num = cr, cr_lon_init=cr_lon_init,
+                         simtime = simtime, r_min=rmin, r_max=rmax,
+                         dt_scale=dt_scale, latitude=0*u.deg, frame = 'synodic',
+                         track_cmes = True, lon_out = 0*u.rad)
     
     #model = Hin.set_time_dependent_boundary(vcarr_rmin, time1au,
                         #run_start, simtime = simtime, r_min=rmin, r_max=rmax,
@@ -417,23 +462,26 @@ for _, onecme in crlist.iterrows():
     
     #========================================================
     # Spheroidal cone cme
-    timeshift = (11.5 * u.solRad / (onecme['V'] * u.km/u.s)).to(u.day)
+    #timeshift = (11.5 * u.solRad / (onecme['V'] * u.km/u.s)).to(u.day)
 
-    cme = H.ConeCME(t_launch=13.6 * u.day - timeshift,
+    cme = H.ConeCME(t_launch=0.0 * u.day,
                     longitude=onecme['lon'] * u.deg,
                     latitude=onecme['lat'] * u.deg,
                     initial_height=rmin,
-                    width=2.0 * onecme['Ang_rad'] * u.deg,
+                    width=2.0 * onecme['ang'] * u.deg,
                     v=onecme['V']* (u.km / u.s),
                     thickness=0.0 * u.solRad,
-                    cme_fixed_duration=False)
-
+                    cme_fixed_duration=True,
+                    fixed_duration=8.5*60*60*u.s)
+    
+    modelbg.solve([])
     model.solve([cme])
         
     # The Earth time series can be plotted, along with OMNI data (downloaded on demand),using:
-    fig, axs = HA.plot_earth_timeseries(model, plot_omni = True)
+    fig, axs = plot_earth_timeseries(model, modelbg, plot_omni = True)
+    axs[0].axvline(onecme['Disturbance_Time'], color='r')
     data_dir = project_dirs['HUXt_figures']
-    out_path = os.path.join(data_dir, "time_series_OMNI")
-    filename = f"{onecme['cr_num']}_{onecme['cr_lon_init']}.pdf"
+    out_path = os.path.join(data_dir, "time_series_new")
+    filename = f"{onecme['Disturbance_Time']}.pdf"
     filepath = os.path.join(out_path, filename)
     fig.savefig(filepath, bbox_inches='tight')

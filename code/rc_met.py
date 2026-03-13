@@ -108,7 +108,7 @@ crlist['earth_lat'] = crlist['Time_21.5'].apply(lambda dt: get_earth_lat(dt))
 icmelist_path = os.path.join(project_dirs['input'],
                                 'Richardson_Cane_Processed_ICME_list.csv')
 
-#HUXt run parameters
+HUXt run parameters
 dt_scale = 4
 rmin = 21.5*u.solRad
 rmax = 230*u.solRad #outer boundary for HUXt runs
