@@ -159,7 +159,7 @@ def spheroidal_met(onecme,model):
     
     return tt, v_1au
     
-def fixed_duration_rc(onecme,model,duration,rmin=rmin):
+def fixed_duration_rc(onecme,model,duration):
     '''Solve HUXt using a fixed pulse duration cone CME for Richardson_Cane cone cmes'''
     
     # CME initialisation date
@@ -188,7 +188,7 @@ def fixed_duration_rc(onecme,model,duration,rmin=rmin):
     
     return tt, v_1au
     
-def fixed_duration_met(onecme,model,duration,rmin=rmin):
+def fixed_duration_met(onecme,model,duration):
     '''Solve HUXt using a fixed pulse duration cone CME for Met Office cone cmes'''
     
     # CME initialisation date
