@@ -135,7 +135,7 @@ def spheroidal_met(onecme,model):
     '''Solve HUXt using a spheroidal cone CME and Met Office cone CME parameters'''
     
     # CME initialisation date
-    t_cme = onecme['Time_met']
+    t_cme = Time(onecme['Time_met'])
     # CME initialisation relative to model initialisation, in days
     dt_cme = (t_cme - model.time_init).jd * u.day
     
@@ -163,7 +163,7 @@ def fixed_duration_rc(onecme,model,duration):
     '''Solve HUXt using a fixed pulse duration cone CME for Richardson_Cane cone cmes'''
     
     # CME initialisation date
-    t_cme = onecme['Time_21.5']
+    t_cme = Time(onecme['Time_21.5'])
     # CME initialisation relative to model initialisation, in days
     dt_cme = (t_cme - model.time_init).jd * u.day
     
@@ -192,7 +192,7 @@ def fixed_duration_met(onecme,model,duration):
     '''Solve HUXt using a fixed pulse duration cone CME for Met Office cone cmes'''
     
     # CME initialisation date
-    t_cme = onecme['Time_met']
+    t_cme = Time(onecme['Time_met'])
     # CME initialisation relative to model initialisation, in days
     dt_cme = (t_cme - model.time_init).jd * u.day
     
