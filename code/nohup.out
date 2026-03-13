@@ -1,0 +1,14 @@
+  File "/home/wo831335/Pulse_Duration_Calibration/code/rc_met_wsa.py", line 244
+    v_met = [[f"v_{d:.1f}h"] for d in durations
+            ^
+SyntaxError: '[' was never closed
+Traceback (most recent call last):
+  File "/home/wo831335/Pulse_Duration_Calibration/code/rc_met_wsa.py", line 12, in <module>
+    import joblib
+ModuleNotFoundError: No module named 'joblib'
+/home/wo831335/Pulse_Duration_Calibration/code/rc_met_wsa.py:94: FutureWarning: Setting an item of incompatible dtype is deprecated and will raise an error in a future version of pandas. Value '1 days 10:37:00' has dtype incompatible with float64, please explicitly cast to a compatible dtype first.
+  crlist.loc[irow,'tt_21'] = crlist.loc[irow,'Disturbance_Time'] - crlist.loc[irow,'Time_21.5']
+Traceback (most recent call last):
+  File "/home/wo831335/Pulse_Duration_Calibration/code/rc_met_wsa.py", line 162, in <module>
+    def fixed_duration_rc(onecme,model,duration,rmin=rmin):
+NameError: name 'rmin' is not defined

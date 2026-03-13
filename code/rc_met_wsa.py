@@ -241,7 +241,7 @@ sph_as_met = ['Spheroidal']
 tt_rc = [[f"tt_{d:.1f}h"] for d in durations]
 v_rc = [[f"v_{d:.1f}h"] for d in durations]
 tt_met = [[f"tt_{d:.1f}h"] for d in durations]
-v_met = [[f"v_{d:.1f}h"] for d in durations
+v_met = [[f"v_{d:.1f}h"] for d in durations]
     
 # Iterate over all CMEs in crlist
 for _, onecme in crlist.iterrows():
