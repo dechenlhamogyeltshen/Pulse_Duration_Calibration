@@ -232,6 +232,10 @@ arrival_speed_rc.append(['Observed'] + list(crlist['V_ICME']))
 arrival_speed_met.append(['Observed'] + list(crlist['V_ICME']))
 
 durations = np.arange(1.0, 25.0, 0.5)  # CME durations in hours
+rmin = 21.5*u.solRad
+rmax = 230*u.solRad #outer boundary for HUXt runs
+dt_scale = 4
+simtime = 27.27 * u.day
 
 # Pre-initialize rows
 sph_tt_rc = ['Spheroidal']
