@@ -94,9 +94,9 @@ for irow in range(0, len(crlist)):
 crlist['tt_21'] = crlist['tt_21'].apply(lambda x: x.days + x.seconds / 86400 if isinstance(x, timedelta) else None)
 
 # Add a new column with carrington rotation number of CME time
-crlist['cr_num'] = crlist['CME_Time'].apply(lambda dt: Hin.datetime2huxtinputs(dt)[0])
-crlist['cr_lon_init'] = crlist['CME_Time'].apply(lambda dt: Hin.datetime2huxtinputs(dt)[1])
-crlist['earth_lat'] = crlist['CME_Time'].apply(lambda dt: get_earth_lat(dt))
+crlist['cr_num'] = crlist['Time_21.5'].apply(lambda dt: Hin.datetime2huxtinputs(dt)[0])
+crlist['cr_lon_init'] = crlist['Time_21.5'].apply(lambda dt: Hin.datetime2huxtinputs(dt)[1])
+crlist['earth_lat'] = crlist['Time_21.5'].apply(lambda dt: get_earth_lat(dt))
 
 #===============================================================================
 # <codecell> Create OMNI inner boundary conditions
