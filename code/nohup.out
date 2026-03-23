@@ -1,6 +1,0 @@
-/home/wo831335/Pulse_Duration_Calibration/code/rc_met_wsa.py:94: FutureWarning: Setting an item of incompatible dtype is deprecated and will raise an error in a future version of pandas. Value '1 days 10:37:00' has dtype incompatible with float64, please explicitly cast to a compatible dtype first.
-  crlist.loc[irow,'tt_21'] = crlist.loc[irow,'Disturbance_Time'] - crlist.loc[irow,'Time_21.5']
-/opt/miniconda3/envs/omni_cnn_huxt/lib/python3.9/site-packages/erfa/core.py:133: ErfaWarning: ERFA function "dtf2d" yielded 1 of "dubious year (Note 6)"
-  warn(f'ERFA function "{func_name}" yielded {wmsg}', ErfaWarning)
-/opt/miniconda3/envs/omni_cnn_huxt/lib/python3.9/site-packages/erfa/core.py:133: ErfaWarning: ERFA function "dtf2d" yielded 1 of "dubious year (Note 6)"
-  warn(f'ERFA function "{func_name}" yielded {wmsg}', ErfaWarning)
